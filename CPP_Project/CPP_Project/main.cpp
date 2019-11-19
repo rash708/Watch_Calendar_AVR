@@ -253,8 +253,8 @@ void timer1_ini(void) // Настройка Timer1
 {
 	TCCR1B |= (1 << WGM12); // устанавливаем режим СТС (сброс по совпадению)
 	TIMSK |= (1 << OCIE1A); //устанавливаем бит разрешения прерывания 1ого счетчика по совпадению с OCR1A(H и L)
-	OCR1AH = 0b00010000;	//записываем в регистр число для сравнения
-	OCR1AL = 0b00000010;
+	OCR1AH = 0b01111010;	//записываем в регистр число для сравнения
+	OCR1AL = 0b00010010;
 	TCCR1B |= (1 << CS12); //установим делитель 256.
 }
 
@@ -282,9 +282,9 @@ void var_ini() //Инициализация переменных
 	second = 0;
 	minute = 0;
 	hour = 0;
-	date = 26;
-	month = 12;
-	year = 2055;
+	date = 1;
+	month = 11;
+	year = 2019;
 	disp_flag = 0;
 }
 //-----------------------------------------------------------------------------------------
@@ -298,7 +298,6 @@ int main(void)
 	UART_init(8);
 
 	sei(); //Глобальные прерывания
-
 
 	UART_send_string_ln("Print 'help' for more information");
 
@@ -319,14 +318,23 @@ int main(void)
 		if (disp_flag == 1)
 		{
 
-			if (!(PIND & (1 << PIND5)))
+			if (!(PIND & (1 << PIND6))) //year--
+			{
+				if (--year == 0)
+					year = 1;
+				date = 1;
+				while (!(PIND & (1 << PIND6)))
+					;
+			}
+
+			if (!(PIND & (1 << PIND5))) //year++
 			{
 				year++;
 				while (!(PIND & (1 << PIND5)))
 					;
 			}
 
-			if (!(PIND & (1 << PIND4)))
+			if (!(PIND & (1 << PIND4))) // mouth++
 			{
 				if (++month == 13)
 					month = 1;
@@ -335,7 +343,7 @@ int main(void)
 					;
 			}
 
-			if (!(PIND & (1 << PIND3)))
+			if (!(PIND & (1 << PIND3))) // date++
 			{
 				if (++date == 32)
 				{
@@ -366,28 +374,36 @@ int main(void)
 					;
 			}
 
+			PORTC = ~(1 << 7);
+			PORTA = numberSegments[((year % 1000) % 100) % 10]; //year 8
+			_delay_ms(1);
+
+			PORTC = ~(1 << 6);
+			PORTA = numberSegments[((year % 1000) % 100) / 10]; //year 7
+			_delay_ms(1);
+
 			PORTC = ~(1 << 5);
-			PORTA = numberSegments[((year - 2000) % 10)]; //sec1
+			PORTA = numberSegments[(year % 1000) / 100]; //year 6
 			_delay_ms(1);
 
 			PORTC = ~(1 << 4);
-			PORTA = numberSegments[((year - 2000) / 10)]; //sec2
+			PORTA = numberSegments[(year / 1000)]; //year 5
 			_delay_ms(1);
 
 			PORTC = ~(1 << 3);
-			PORTA = numberSegments[(month % 10)]; //min1
+			PORTA = numberSegments[(month % 10)] | (1 << PINA7); //month 4
 			_delay_ms(1);
 
 			PORTC = ~(1 << 2);
-			PORTA = numberSegments[(month / 10)]; //min2
+			PORTA = numberSegments[(month / 10)]; //month 3
 			_delay_ms(1);
 
 			PORTC = ~(1 << 1);
-			PORTA = numberSegments[(date % 10)]; //hour1
+			PORTA = numberSegments[(date % 10)] | (1 << PINA7); //date 2
 			_delay_ms(1);
 
 			PORTC = ~(1 << 0);
-			PORTA = numberSegments[(date / 10)]; //hour2
+			PORTA = numberSegments[(date / 10)]; //date 1
 			_delay_ms(1);
 		}
 
@@ -418,28 +434,36 @@ int main(void)
 					;
 			}
 
+			PORTC = ~(1 << 7);
+			PORTA = numberSegments[(second % 10)]; //sec1 6
+			_delay_ms(1);
+
+			PORTC = ~(1 << 6);
+			PORTA = numberSegments[(second / 10)]; //sec2 5
+			_delay_ms(1);
+
 			PORTC = ~(1 << 5);
-			PORTA = numberSegments[(second % 10)]; //sec1
+			PORTA = (1 << 6); // '-' 5
 			_delay_ms(1);
 
 			PORTC = ~(1 << 4);
-			PORTA = numberSegments[(second / 10)]; //sec2
+			PORTA = numberSegments[(minute % 10)]; //min1 5
 			_delay_ms(1);
 
 			PORTC = ~(1 << 3);
-			PORTA = numberSegments[(minute % 10)]; //min1
+			PORTA = numberSegments[(minute / 10)]; //min2 4
 			_delay_ms(1);
 
 			PORTC = ~(1 << 2);
-			PORTA = numberSegments[(minute / 10)]; //min2
+			PORTA = (1 << 6); // '-' 3
 			_delay_ms(1);
 
 			PORTC = ~(1 << 1);
-			PORTA = numberSegments[(hour % 10)]; //hour1
+			PORTA = numberSegments[(hour % 10)]; //hour1 2
 			_delay_ms(1);
 
 			PORTC = ~(1 << 0);
-			PORTA = numberSegments[(hour / 10)]; //hour2
+			PORTA = numberSegments[(hour / 10)]; //hour2 1
 			_delay_ms(1);
 		}
 	}
